@@ -20,7 +20,21 @@ const App = () => {
   const fetchFunds = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/funds');
+      // 根据环境选择不同的API端点
+      const isNetlify = window.location.hostname.includes('netlify') || 
+                       window.location.hostname.includes('app') ||
+                       process.env.NODE_ENV === 'production';
+      
+      const apiUrl = isNetlify ? '/.netlify/functions/funds' : '/api/funds';
+      console.log('📡 获取基金数据，使用API端点:', apiUrl);
+      
+      const response = await axios.get(apiUrl, {
+        timeout: 30000, // 30秒超时
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
       setFunds(response.data);
       
       // 检查数据源类型
@@ -40,13 +54,24 @@ const App = () => {
       console.error('获取基金数据失败:', error);
       if (error.response) {
         // 服务器返回了错误响应
-        message.error(`获取基金数据失败: ${error.response.data.message || '服务器错误'}`);
+        const status = error.response.status;
+        const errorData = error.response.data;
+        
+        if (status === 404) {
+          message.error('获取基金数据失败: API端点未找到，请检查部署配置');
+        } else if (status === 500) {
+          message.error(`获取基金数据失败: 服务器内部错误 - ${errorData?.message || errorData?.error || '未知错误'}`);
+        } else {
+          message.error(`获取基金数据失败: HTTP ${status} - ${errorData?.message || errorData?.error || '服务器错误'}`);
+        }
       } else if (error.request) {
         // 请求发送了但没有收到响应
         message.error('获取基金数据失败: 无法连接到服务器，请检查网络连接');
+      } else if (error.code === 'ECONNABORTED') {
+        message.error('获取基金数据失败: 请求超时，请稍后重试');
       } else {
         // 其他错误
-        message.error('获取基金数据失败: 请稍后重试');
+        message.error(`获取基金数据失败: ${error.message}`);
       }
     } finally {
       setLoading(false);
@@ -74,27 +99,67 @@ const App = () => {
 
     console.log('🚀 开始分析基金，选中基金数量:', selectedFundsData.length);
     console.log('📊 发送分析请求到服务器...');
+    console.log('🌐 当前环境:', window.location.hostname);
     
     setAnalyzing(true);
     try {
-      const response = await axios.post('/api/analyze', { funds: selectedFundsData });
+      // 根据环境选择不同的API端点
+      const isNetlify = window.location.hostname.includes('netlify') || 
+                       window.location.hostname.includes('app') ||
+                       process.env.NODE_ENV === 'production';
+      
+      const apiUrl = isNetlify ? '/.netlify/functions/analyze' : '/api/analyze';
+      console.log('📡 使用API端点:', apiUrl);
+      
+      const response = await axios.post(apiUrl, { funds: selectedFundsData }, {
+        timeout: 30000, // 30秒超时
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
       console.log('✅ 收到服务器响应:', response.data);
       
-      setRecommendations(response.data.recommendations);
-      setAnalysisReport(response.data.analysisReport || []);
-      setAnalysisDate(response.data.analysisDate || '');
-      message.success(`基金分析完成，推荐 ${response.data.recommendations.length} 只基金`);
+      if (response.data && response.data.recommendations) {
+        setRecommendations(response.data.recommendations);
+        setAnalysisReport(response.data.analysisReport || []);
+        setAnalysisDate(response.data.analysisDate || '');
+        message.success(`基金分析完成，推荐 ${response.data.recommendations.length} 只基金`);
+      } else {
+        console.error('❌ 服务器响应格式错误:', response.data);
+        message.error('分析基金失败: 服务器响应格式错误');
+      }
     } catch (error) {
       console.error('❌ 分析基金失败:', error);
+      console.error('❌ 错误详情:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: error.config
+      });
+      
       if (error.response) {
-        console.error('服务器响应错误:', error.response.data);
-        message.error(`分析基金失败: ${error.response.data.message || '服务器错误'}`);
+        const status = error.response.status;
+        const errorData = error.response.data;
+        
+        if (status === 404) {
+          message.error('分析基金失败: API端点未找到，请检查部署配置');
+        } else if (status === 500) {
+          message.error(`分析基金失败: 服务器内部错误 - ${errorData?.message || errorData?.error || '未知错误'}`);
+        } else if (status === 502 || status === 503) {
+          message.error('分析基金失败: 服务器暂时不可用，请稍后重试');
+        } else {
+          message.error(`分析基金失败: HTTP ${status} - ${errorData?.message || errorData?.error || '服务器错误'}`);
+        }
       } else if (error.request) {
         console.error('网络请求错误:', error.request);
         message.error('分析基金失败: 无法连接到服务器，请检查网络连接');
+      } else if (error.code === 'ECONNABORTED') {
+        message.error('分析基金失败: 请求超时，请稍后重试');
       } else {
         console.error('其他错误:', error.message);
-        message.error('分析基金失败: 请稍后重试');
+        message.error(`分析基金失败: ${error.message}`);
       }
     } finally {
       setAnalyzing(false);

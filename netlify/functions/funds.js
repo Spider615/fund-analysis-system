@@ -110,8 +110,13 @@ exports.handler = async (event, context) => {
     'Content-Type': 'application/json'
   };
 
+  console.log('📡 Netlify Function funds 被调用');
+  console.log('🔍 HTTP方法:', event.httpMethod);
+  console.log('🌐 请求来源:', event.headers.origin || event.headers.referer);
+
   // 处理 OPTIONS 请求
   if (event.httpMethod === 'OPTIONS') {
+    console.log('✅ 处理 OPTIONS 预检请求');
     return {
       statusCode: 200,
       headers,
@@ -131,19 +136,22 @@ exports.handler = async (event, context) => {
     let allStockData = [];
     
     try {
-      console.log('开始获取Yahoo Finance数据...');
+      console.log('📊 开始获取Yahoo Finance数据...');
       
       // 批量获取股票数据（限制数量以避免超时）
       const limitedSymbols = stockSymbols.slice(0, 10);
+      console.log('🎯 获取股票代码:', limitedSymbols.join(', '));
+      
       const stockDataPromises = limitedSymbols.map(async (symbol) => {
         try {
           const quote = await yahooFinance.quote(symbol);
+          console.log(`✅ 成功获取 ${symbol} 数据:`, quote.shortName, quote.regularMarketPrice);
           return {
             symbol: symbol,
             quote: quote
           };
         } catch (error) {
-          console.warn(`获取${symbol}数据失败:`, error.message);
+          console.warn(`❌ 获取${symbol}数据失败:`, error.message);
           return null;
         }
       });
@@ -157,15 +165,16 @@ exports.handler = async (event, context) => {
         }
       }
       
-      console.log(`成功获取 ${allStockData.length} 条Yahoo Finance数据`);
+      console.log(`✅ 成功获取 ${allStockData.length} 条Yahoo Finance数据`);
       
     } catch (apiError) {
-      console.warn('Yahoo Finance API不可用:', apiError.message);
+      console.warn('⚠️ Yahoo Finance API不可用:', apiError.message);
     }
     
     let fundsData;
     
     if (useRealData && allStockData.length > 0) {
+      console.log('📈 使用Yahoo Finance实时数据');
       // 转换股票数据为基金数据格式
       fundsData = allStockData.map(stockData => {
         const quote = stockData.quote;
@@ -201,6 +210,7 @@ exports.handler = async (event, context) => {
         };
       });
     } else {
+      console.log('📋 使用模拟数据');
       // 使用模拟数据
       fundsData = mockFunds.map(fund => ({
         ...fund,
@@ -210,6 +220,9 @@ exports.handler = async (event, context) => {
       }));
     }
     
+    console.log(`✅ 返回基金数据，共 ${fundsData.length} 只基金`);
+    console.log('📊 基金列表:', fundsData.map(f => `${f.name}(${f.code})`).join(', '));
+    
     return {
       statusCode: 200,
       headers,
@@ -217,9 +230,11 @@ exports.handler = async (event, context) => {
     };
     
   } catch (error) {
-    console.error('获取基金数据失败:', error);
+    console.error('❌ 获取基金数据失败:', error);
+    console.error('❌ 错误堆栈:', error.stack);
     
     // 返回模拟数据作为备用
+    console.log('🔄 使用备用模拟数据');
     const fallbackData = mockFunds.map(fund => ({
       ...fund,
       netWorth: (Math.random() * 2 + 1).toFixed(4),

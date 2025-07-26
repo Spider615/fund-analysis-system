@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #40a9ff;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            background: #fff2f0;
+            border: 1px solid #ffccc7;
+            color: #a8071a;
+        }
+        .success {
+            background: #f6ffed;
+            border: 1px solid #b7eb8f;
+            color: #389e0d;
+        }
+    </style>
+</head>
+<body>
+    <h1>基金分析系统 API 测试</h1>
+    
+    <div class="test-section">
+        <h2>环境检测</h2>
+        <p>当前域名: <span id="hostname"></span></p>
+        <p>API端点: <span id="api-endpoint"></span></p>
+        <button onclick="detectEnvironment()">检测环境</button>
+        <div id="env-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>测试获取基金数据</h2>
+        <button onclick="testFundsAPI()">测试 /api/funds</button>
+        <div id="funds-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>测试基金分析</h2>
+        <button onclick="testAnalyzeAPI()">测试 /api/analyze</button>
+        <div id="analyze-result" class="result"></div>
+    </div>
+
+    <script>
+        function detectEnvironment() {
+            const hostname = window.location.hostname;
+            const isNetlify = hostname.includes('netlify') || 
+                             hostname.includes('app') ||
+                             window.location.protocol === 'https:';
+            
+            const fundsEndpoint = isNetlify ? '/.netlify/functions/funds' : '/api/funds';
+            const analyzeEndpoint = isNetlify ? '/.netlify/functions/analyze' : '/api/analyze';
+            
+            document.getElementById('hostname').textContent = hostname;
+            document.getElementById('api-endpoint').textContent = isNetlify ? 'Netlify Functions' : 'Local Server';
+            
+            const result = `环境检测结果:
+域名: ${hostname}
+是否为Netlify环境: ${isNetlify}
+基金数据端点: ${fundsEndpoint}
+分析端点: ${analyzeEndpoint}
+协议: ${window.location.protocol}`;
+            
+            document.getElementById('env-result').textContent = result;
+            document.getElementById('env-result').className = 'result success';
+        }
+
+        async function testFundsAPI() {
+            const resultDiv = document.getElementById('funds-result');
+            resultDiv.textContent = '正在测试...';
+            resultDiv.className = 'result';
+            
+            try {
+                const hostname = window.location.hostname;
+                const isNetlify = hostname.includes('netlify') || 
+                                 hostname.includes('app') ||
+                                 window.location.protocol === 'https:';
+                
+                const endpoint = isNetlify ? '/.netlify/functions/funds' : '/api/funds';
+                
+                console.log('测试端点:', endpoint);
+                
+                const response = await fetch(endpoint, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                const result = `✅ 基金数据获取成功!
+状态码: ${response.status}
+数据数量: ${data.length}
+第一个基金: ${data[0]?.name} (${data[0]?.code})
+响应时间: ${new Date().toLocaleTimeString()}
+
+完整数据:
+${JSON.stringify(data, null, 2)}`;
+                
+                resultDiv.textContent = result;
+                resultDiv.className = 'result success';
+                
+            } catch (error) {
+                console.error('测试失败:', error);
+                
+                const result = `❌ 基金数据获取失败!
+错误信息: ${error.message}
+错误时间: ${new Date().toLocaleTimeString()}
+
+请检查:
+1. 网络连接是否正常
+2. API端点是否正确
+3. 服务器是否运行正常`;
+                
+                resultDiv.textContent = result;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testAnalyzeAPI() {
+            const resultDiv = document.getElementById('analyze-result');
+            resultDiv.textContent = '正在测试...';
+            resultDiv.className = 'result';
+            
+            try {
+                // 先获取基金数据
+                const hostname = window.location.hostname;
+                const isNetlify = hostname.includes('netlify') || 
+                                 hostname.includes('app') ||
+                                 window.location.protocol === 'https:';
+                
+                const fundsEndpoint = isNetlify ? '/.netlify/functions/funds' : '/api/funds';
+                const analyzeEndpoint = isNetlify ? '/.netlify/functions/analyze' : '/api/analyze';
+                
+                console.log('获取基金数据:', fundsEndpoint);
+                const fundsResponse = await fetch(fundsEndpoint);
+                
+                if (!fundsResponse.ok) {
+                    throw new Error(`获取基金数据失败: HTTP ${fundsResponse.status}`);
+                }
+                
+                const funds = await fundsResponse.json();
+                
+                if (!funds || funds.length === 0) {
+                    throw new Error('基金数据为空');
+                }
+                
+                // 选择前3个基金进行分析
+                const selectedFunds = funds.slice(0, 3);
+                
+                console.log('分析基金:', analyzeEndpoint, selectedFunds.length);
+                
+                const analyzeResponse = await fetch(analyzeEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ funds: selectedFunds })
+                });
+                
+                if (!analyzeResponse.ok) {
+                    const errorText = await analyzeResponse.text();
+                    throw new Error(`HTTP ${analyzeResponse.status}: ${errorText}`);
+                }
+                
+                const analysisResult = await analyzeResponse.json();
+                
+                const result = `✅ 基金分析成功!
+状态码: ${analyzeResponse.status}
+推荐基金数量: ${analysisResult.recommendations?.length || 0}
+分析报告数量: ${analysisResult.analysisReport?.length || 0}
+分析时间: ${analysisResult.analysisDate}
+响应时间: ${new Date().toLocaleTimeString()}
+
+推荐基金: ${analysisResult.recommendations?.join(', ') || '无'}
+
+完整分析结果:
+${JSON.stringify(analysisResult, null, 2)}`;
+                
+                resultDiv.textContent = result;
+                resultDiv.className = 'result success';
+                
+            } catch (error) {
+                console.error('分析测试失败:', error);
+                
+                const result = `❌ 基金分析失败!
+错误信息: ${error.message}
+错误时间: ${new Date().toLocaleTimeString()}
+
+请检查:
+1. 基金数据是否正常获取
+2. 分析API端点是否正确
+3. 请求参数是否正确
+4. 服务器是否正常处理分析请求`;
+                
+                resultDiv.textContent = result;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        // 页面加载时自动检测环境
+        window.onload = function() {
+            detectEnvironment();
+        };
+    </script>
+</body>
+</html>
