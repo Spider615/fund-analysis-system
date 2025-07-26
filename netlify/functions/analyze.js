@@ -74,7 +74,7 @@ exports.handler = async (event, context) => {
     let marketAnalysis = '';
     
     // 检查是否有DeepSeek API密钥
-    const hasApiKey = process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !== 'sk-eab8ae1adaa041f79db13dde41110c22';
+    const hasApiKey = process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !== 'sk-your-deepseek-api-key-here' && process.env.DEEPSEEK_API_KEY.startsWith('sk-');
     
     if (hasApiKey) {
       console.log('🤖 使用DeepSeek AI进行智能分析...');

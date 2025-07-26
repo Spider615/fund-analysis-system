@@ -18,19 +18,35 @@
 
 ## 部署方案
 
-### 方案1：Vercel 部署（推荐）
+### 🚀 方案1：Netlify 部署（推荐）
+
+**优势**：
+- 自动部署和持续集成
+- 内置 Functions 支持
+- 免费额度充足
+- 配置简单
+
+**部署步骤**：
+1. 将代码推送到 GitHub/GitLab
+2. 在 [Netlify](https://app.netlify.com/) 中导入项目
+3. 配置构建设置（自动读取 netlify.toml）
+4. 设置环境变量：
+   ```
+   DEEPSEEK_API_KEY = sk-0e7376d4dbc84cc0b97a47d658297635
+   NODE_VERSION = 18
+   ```
+5. 部署完成
+
+**详细指南**：参见 [NETLIFY_DEPLOYMENT_GUIDE.md](./NETLIFY_DEPLOYMENT_GUIDE.md)
+
+**部署检查**：参见 [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)
+
+### 方案2：Vercel 部署
 
 1. 将代码推送到 GitHub
 2. 在 Vercel 中导入项目
 3. 设置环境变量：`DEEPSEEK_API_KEY`
 4. 部署完成
-
-### 方案2：Netlify Functions
-
-1. 将代码推送到 GitHub
-2. 在 Netlify 中导入项目
-3. 设置环境变量：`DEEPSEEK_API_KEY`
-4. 使用 `netlify.toml` 配置
 
 ### 方案3：传统服务器部署
 
@@ -51,6 +67,9 @@ npm run serve  # 后端服务器
 
 # 构建生产版本
 npm run build
+
+# 验证部署（部署后运行）
+npm run verify-deployment https://your-site.netlify.app
 ```
 
 ## 环境变量配置

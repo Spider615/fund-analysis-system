@@ -17,3 +17,4 @@
 # 环境变量配置
 [build.environment]
   NODE_VERSION = "18"
+  DEEPSEEK_API_KEY = "sk-0e7376d4dbc84cc0b97a47d658297635"
