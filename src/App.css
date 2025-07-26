@@ -1,0 +1,67 @@
+.layout {
+  min-height: 100vh;
+}
+
+.site-layout-content {
+  padding: 24px;
+  background: #fff;
+  min-height: 280px;
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.logo {
+  float: left;
+  width: 120px;
+  height: 31px;
+  margin: 16px 24px 16px 0;
+  background: rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.fund-analysis-summary {
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.fund-card {
+  height: 100%;
+  margin-bottom: 16px;
+}
+
+.fund-card .ant-card-head {
+  background-color: #f6f8fa;
+}
+
+.recommended {
+  border: 2px solid #52c41a;
+}
+
+.recommended .ant-card-head {
+  background-color: #f6ffed;
+  border-bottom: 1px solid #b7eb8f;
+}
+
+.recommended .ant-card-head-title {
+  color: #52c41a;
+}
+
+.analysis-result {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.analysis-result h4 {
+  margin-bottom: 8px;
+}
+
+.analysis-result ul {
+  margin-bottom: 0;
+}
