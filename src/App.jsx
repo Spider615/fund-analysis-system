@@ -20,13 +20,19 @@ const App = () => {
   const fetchFunds = async () => {
     setLoading(true);
     try {
-      // 根据环境选择不同的API端点
-      const isNetlify = window.location.hostname.includes('netlify') || 
-                       window.location.hostname.includes('app') ||
+      // 更精确的环境检测
+      const isNetlify = window.location.hostname.includes('netlify.app') || 
+                       window.location.hostname.includes('netlify.com') ||
+                       window.location.hostname.includes('.app') ||
                        process.env.NODE_ENV === 'production';
       
       const apiUrl = isNetlify ? '/.netlify/functions/funds' : '/api/funds';
       console.log('📡 获取基金数据，使用API端点:', apiUrl);
+      console.log('🌐 当前环境检测:', {
+        hostname: window.location.hostname,
+        isNetlify,
+        nodeEnv: process.env.NODE_ENV
+      });
       
       const response = await axios.get(apiUrl, {
         timeout: 30000, // 30秒超时
@@ -98,26 +104,49 @@ const App = () => {
     const selectedFundsData = funds.filter(fund => selectedFunds.includes(fund.code));
 
     console.log('🚀 开始分析基金，选中基金数量:', selectedFundsData.length);
-    console.log('📊 发送分析请求到服务器...');
+    console.log('📊 选中的基金数据:', selectedFundsData);
     console.log('🌐 当前环境:', window.location.hostname);
+    console.log('🌐 当前URL:', window.location.href);
     
     setAnalyzing(true);
     try {
-      // 根据环境选择不同的API端点
-      const isNetlify = window.location.hostname.includes('netlify') || 
-                       window.location.hostname.includes('app') ||
+      // 更精确的环境检测
+      const isNetlify = window.location.hostname.includes('netlify.app') || 
+                       window.location.hostname.includes('netlify.com') ||
+                       window.location.hostname.includes('.app') ||
                        process.env.NODE_ENV === 'production';
       
       const apiUrl = isNetlify ? '/.netlify/functions/analyze' : '/api/analyze';
       console.log('📡 使用API端点:', apiUrl);
+      console.log('📡 完整请求URL:', window.location.origin + apiUrl);
+      console.log('🌐 环境检测结果:', {
+        hostname: window.location.hostname,
+        isNetlify,
+        nodeEnv: process.env.NODE_ENV,
+        origin: window.location.origin
+      });
+      
+      // 添加请求开始时间
+      const startTime = Date.now();
+      console.log('⏰ 请求开始时间:', new Date(startTime).toISOString());
       
       const response = await axios.post(apiUrl, { funds: selectedFundsData }, {
-        timeout: 30000, // 30秒超时
+        timeout: 60000, // 增加到60秒超时
         headers: {
           'Content-Type': 'application/json'
+        },
+        // 添加请求拦截器
+        onUploadProgress: (progressEvent) => {
+          console.log('📤 上传进度:', progressEvent);
+        },
+        onDownloadProgress: (progressEvent) => {
+          console.log('📥 下载进度:', progressEvent);
         }
       });
       
+      const endTime = Date.now();
+      console.log('⏰ 请求结束时间:', new Date(endTime).toISOString());
+      console.log('⏰ 请求耗时:', (endTime - startTime) / 1000, '秒');
       console.log('✅ 收到服务器响应:', response.data);
       
       if (response.data && response.data.recommendations) {
@@ -130,18 +159,28 @@ const App = () => {
         message.error('分析基金失败: 服务器响应格式错误');
       }
     } catch (error) {
+      const endTime = Date.now();
       console.error('❌ 分析基金失败:', error);
+      console.error('❌ 错误发生时间:', new Date(endTime).toISOString());
+      console.error('❌ 错误类型:', error.constructor.name);
+      console.error('❌ 错误代码:', error.code);
       console.error('❌ 错误详情:', {
         message: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
         data: error.response?.data,
-        config: error.config
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          timeout: error.config?.timeout,
+          headers: error.config?.headers
+        }
       });
       
       if (error.response) {
         const status = error.response.status;
         const errorData = error.response.data;
+        console.error('❌ 服务器响应错误:', status, errorData);
         
         if (status === 404) {
           message.error('分析基金失败: API端点未找到，请检查部署配置');
@@ -153,12 +192,19 @@ const App = () => {
           message.error(`分析基金失败: HTTP ${status} - ${errorData?.message || errorData?.error || '服务器错误'}`);
         }
       } else if (error.request) {
-        console.error('网络请求错误:', error.request);
+        console.error('❌ 网络请求错误:', error.request);
+        console.error('❌ 请求对象详情:', {
+          readyState: error.request.readyState,
+          status: error.request.status,
+          statusText: error.request.statusText,
+          responseURL: error.request.responseURL
+        });
         message.error('分析基金失败: 无法连接到服务器，请检查网络连接');
       } else if (error.code === 'ECONNABORTED') {
+        console.error('❌ 请求超时');
         message.error('分析基金失败: 请求超时，请稍后重试');
       } else {
-        console.error('其他错误:', error.message);
+        console.error('❌ 其他错误:', error.message);
         message.error(`分析基金失败: ${error.message}`);
       }
     } finally {
@@ -294,39 +340,7 @@ const App = () => {
         return <Tag color={color}>{level}</Tag>;
       },
     },
-    {
-      title: '基金经理',
-      dataIndex: 'manager',
-      key: 'manager',
-      width: 150,
-      render: (manager) => (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            backgroundColor: '#1890ff',
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            marginRight: '8px'
-          }}>
-            {manager ? manager.charAt(0) : '?'}
-          </div>
-          <div>
-            <div style={{ fontWeight: 'bold', fontSize: '14px' }}>
-              {manager || '未知'}
-            </div>
-            <div style={{ fontSize: '12px', color: '#666' }}>
-              基金经理
-            </div>
-          </div>
-        </div>
-      ),
-    },
+
     {
       title: '更新时间',
       dataIndex: 'updateTime',
@@ -438,27 +452,8 @@ const App = () => {
                               <Paragraph>基金代码: <span style={{ fontWeight: 'bold', color: '#666' }}>{report.code}</span></Paragraph>
                               <Paragraph>基金类型: <Tag color="blue">{fund.type || '未知'}</Tag></Paragraph>
                               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-                                <span style={{ marginRight: '8px' }}>基金经理:</span>
-                                <div style={{ display: 'flex', alignItems: 'center' }}>
-                                  <div style={{
-                                    width: '24px',
-                                    height: '24px',
-                                    borderRadius: '50%',
-                                    backgroundColor: '#52c41a',
-                                    color: 'white',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    marginRight: '6px'
-                                  }}>
-                                    {fund.manager ? fund.manager.charAt(0) : '?'}
-                                  </div>
-                                  <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
-                                    {fund.manager || '未知'}
-                                  </span>
-                                </div>
+                                <span style={{ marginRight: '8px' }}>基金类型:</span>
+                                <Tag color="blue">{fund.type}</Tag>
                               </div>
                               <Paragraph>综合评分: <span style={{ fontWeight: 'bold', color: '#1890ff' }}>{report.score}</span></Paragraph>
                               <Paragraph>
@@ -487,8 +482,12 @@ const App = () => {
                                   <div className="fund-stat-label">近3年</div>
                                 </div>
                                 <div className="fund-stat-item">
-                                  <div className="fund-stat-value" style={{ color: report.excessYearReturn.startsWith('+') ? '#52c41a' : '#f5222d' }}>
-                                    {report.excessYearReturn}
+                                  <div className="fund-stat-value" style={{ 
+                                    color: (typeof report.excessYearReturn === 'string' && report.excessYearReturn.startsWith('+')) || 
+                                           (typeof report.excessYearReturn === 'number' && report.excessYearReturn >= 0) ? '#52c41a' : '#f5222d' 
+                                  }}>
+                                    {typeof report.excessYearReturn === 'string' ? report.excessYearReturn : 
+                                     (report.excessYearReturn >= 0 ? '+' : '') + report.excessYearReturn.toFixed(2) + '%'}
                                   </div>
                                   <div className="fund-stat-label">同类超额</div>
                                 </div>
@@ -537,29 +536,6 @@ const App = () => {
                             <Card className="fund-card" title={fund.name} extra={<Tag color="green">推荐</Tag>}>
                               <Paragraph>基金代码: <span style={{ fontWeight: 'bold', color: '#666' }}>{fund.code}</span></Paragraph>
                               <Paragraph>基金类型: <Tag color="blue">{fund.type}</Tag></Paragraph>
-                              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-                                <span style={{ marginRight: '8px' }}>基金经理:</span>
-                                <div style={{ display: 'flex', alignItems: 'center' }}>
-                                  <div style={{
-                                    width: '24px',
-                                    height: '24px',
-                                    borderRadius: '50%',
-                                    backgroundColor: '#52c41a',
-                                    color: 'white',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    marginRight: '6px'
-                                  }}>
-                                    {fund.manager ? fund.manager.charAt(0) : '?'}
-                                  </div>
-                                  <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
-                                    {fund.manager}
-                                  </span>
-                                </div>
-                              </div>
                               <Paragraph>
                                 单位净值: <span style={{ fontWeight: 'bold' }}>{fund.netWorth || '-'}</span>
                                 <span style={{ marginLeft: '15px' }}>日增长率: </span>

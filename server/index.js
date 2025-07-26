@@ -26,7 +26,6 @@ const mockFunds = [
     yearReturn: 15.67,
     threeYearReturn: 42.35,
     riskLevel: '中风险',
-    manager: '王阳',
   },
   {
     code: '110022',
@@ -35,7 +34,6 @@ const mockFunds = [
     yearReturn: 22.43,
     threeYearReturn: 78.91,
     riskLevel: '中高风险',
-    manager: '李红',
   },
   {
     code: '161725',
@@ -44,7 +42,6 @@ const mockFunds = [
     yearReturn: 31.56,
     threeYearReturn: 112.78,
     riskLevel: '中高风险',
-    manager: '张伟',
   },
   {
     code: '001938',
@@ -53,7 +50,6 @@ const mockFunds = [
     yearReturn: 18.92,
     threeYearReturn: 65.34,
     riskLevel: '中高风险',
-    manager: '周明',
   },
   {
     code: '000248',
@@ -62,7 +58,6 @@ const mockFunds = [
     yearReturn: 20.15,
     threeYearReturn: 72.46,
     riskLevel: '中风险',
-    manager: '赵丽',
   },
   {
     code: '000311',
@@ -71,7 +66,6 @@ const mockFunds = [
     yearReturn: 12.78,
     threeYearReturn: 45.23,
     riskLevel: '中风险',
-    manager: '刘强',
   },
   {
     code: '000478',
@@ -80,7 +74,6 @@ const mockFunds = [
     yearReturn: 10.45,
     threeYearReturn: 38.67,
     riskLevel: '中风险',
-    manager: '陈静',
   },
   {
     code: '110027',
@@ -89,7 +82,6 @@ const mockFunds = [
     yearReturn: 5.23,
     threeYearReturn: 18.45,
     riskLevel: '低风险',
-    manager: '张明',
   },
   {
     code: '161716',
@@ -98,7 +90,6 @@ const mockFunds = [
     yearReturn: 4.87,
     threeYearReturn: 16.92,
     riskLevel: '低风险',
-    manager: '李强',
   },
   {
     code: '000286',
@@ -107,7 +98,6 @@ const mockFunds = [
     yearReturn: 4.32,
     threeYearReturn: 15.78,
     riskLevel: '低风险',
-    manager: '王芳',
   },
   {
     code: '001832',
@@ -116,7 +106,6 @@ const mockFunds = [
     yearReturn: 14.23,
     threeYearReturn: 45.67,
     riskLevel: '中风险',
-    manager: '陈明',
   },
   {
     code: '000991',
@@ -125,7 +114,6 @@ const mockFunds = [
     yearReturn: 16.78,
     threeYearReturn: 58.92,
     riskLevel: '中高风险',
-    manager: '张伟',
   },
 ];
 
@@ -359,14 +347,6 @@ app.get('/api/funds', async (req, res) => {
           fundName = `${fundName}行业ETF`;
         }
         
-        // 生成更合理的基金经理名字
-        const managerNames = [
-          '张伟', '李娜', '王强', '刘敏', '陈杰', '杨洋', '赵丽', '孙涛', '周静', '吴勇',
-          '徐芳', '朱明', '胡斌', '郭华', '林峰', '何丽', '高军', '梁雪', '宋涛', '董敏',
-          '韩磊', '冯娟', '邓强', '曹丽', '彭涛', '范静', '石磊', '姚敏', '谭强', '黎华'
-        ];
-        const randomManager = managerNames[Math.floor(Math.random() * managerNames.length)];
-        
         // 生成基金代码（基于股票代码）
         const fundCode = stockData.symbol.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 6).padEnd(6, '0');
         
@@ -411,7 +391,6 @@ app.get('/api/funds', async (req, res) => {
           yearReturn: parseFloat(yearReturn.toFixed(2)),
           threeYearReturn: parseFloat(threeYearReturn.toFixed(2)),
           riskLevel: riskLevel,
-          manager: randomManager,
           netWorth: (quote.regularMarketPrice || 1).toFixed(4),
           dayGrowth: regularMarketChangePercent.toFixed(2),
           updateTime: updateTime
@@ -652,7 +631,6 @@ ${JSON.stringify(averageReturns, null, 2)}
       "threeYearReturn": "近3年收益率%",
       "excessYearReturn": "同类超额收益%",
       "riskLevel": "风险等级",
-      "manager": "基金经理",
       "reasons": [
         "推荐理由1",
         "推荐理由2", 
@@ -770,13 +748,12 @@ ${JSON.stringify(averageReturns, null, 2)}
             threeYearReturn: fund.threeYearReturn.toFixed(2) + '%',
             excessYearReturn: (fund.excessYearReturn >= 0 ? '+' : '') + fund.excessYearReturn.toFixed(2) + '%',
             riskLevel: fund.riskLevel,
-            manager: fund.manager,
             reasons: [
               `近1年收益率${fund.yearReturn.toFixed(2)}%，表现${fund.excessYearReturn >= 0 ? '优秀' : '一般'}`,
               `风险等级${fund.riskLevel}，适合${fund.riskLevel.includes('低') ? '稳健' : '积极'}投资者`,
-              `基金经理${fund.manager}管理经验丰富`
+              `基金类型${fund.type}，投资策略明确`
             ],
-            analysis: `${fund.name}(${fund.code})在过去一年的收益率为${fund.yearReturn.toFixed(2)}%，${fund.excessYearReturn >= 0 ? '高于' : '低于'}同类平均${Math.abs(fund.excessYearReturn).toFixed(2)}%。风险等级为${fund.riskLevel}，综合评分为${fund.score.toFixed(2)}。该基金由${fund.manager}管理，具有良好的投资价值。建议关注其长期表现和风险控制能力。`
+            analysis: `${fund.name}(${fund.code})在过去一年的收益率为${fund.yearReturn.toFixed(2)}%，${fund.excessYearReturn >= 0 ? '高于' : '低于'}同类平均${Math.abs(fund.excessYearReturn).toFixed(2)}%。风险等级为${fund.riskLevel}，综合评分为${fund.score.toFixed(2)}。该基金具有良好的投资价值。建议关注其长期表现和风险控制能力。`
           })),
           marketAnalysis: `基于当前市场数据和智能分析，从前10只基金中推荐了3只优质基金。当前市场环境下，建议采用分散投资策略，平衡收益与风险。推荐的基金在收益性、稳定性和风险控制方面表现突出，适合不同风险偏好的投资者。投资时请注意市场波动风险，建议长期持有以获得更好的投资回报。AI分析显示：${aiResponse.substring(0, 200)}...`
         };

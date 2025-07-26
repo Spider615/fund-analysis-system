@@ -3,103 +3,11 @@ const OpenAI = require('openai');
 
 // 配置DeepSeek API
 const deepseek = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY || 'sk-eab8ae1adaa041f79db13dde41110c22',
+  apiKey: process.env.DEEPSEEK_API_KEY,
   baseURL: 'https://api.deepseek.com'
 });
 
-// 模拟基金数据
-const mockFunds = [
-  {
-    code: '000001',
-    name: '华夏成长混合',
-    type: '混合型',
-    yearReturn: 15.67,
-    threeYearReturn: 42.35,
-    riskLevel: '中风险',
-    manager: '王阳',
-  },
-  {
-    code: '110022',
-    name: '易方达消费行业股票',
-    type: '股票型',
-    yearReturn: 22.43,
-    threeYearReturn: 78.91,
-    riskLevel: '中高风险',
-    manager: '李红',
-  },
-  {
-    code: '161725',
-    name: '招商中证白酒指数分级',
-    type: '指数型',
-    yearReturn: 31.56,
-    threeYearReturn: 112.78,
-    riskLevel: '中高风险',
-    manager: '张伟',
-  },
-  {
-    code: '001938',
-    name: '中欧时代先锋股票A',
-    type: '股票型',
-    yearReturn: 18.92,
-    threeYearReturn: 65.34,
-    riskLevel: '中高风险',
-    manager: '周明',
-  },
-  {
-    code: '000248',
-    name: '汇添富中证主要消费ETF联接',
-    type: '指数型',
-    yearReturn: 20.15,
-    threeYearReturn: 72.46,
-    riskLevel: '中风险',
-    manager: '赵丽',
-  },
-  {
-    code: '000311',
-    name: '景顺长城沪深300指数增强',
-    type: '指数型',
-    yearReturn: 12.78,
-    threeYearReturn: 45.23,
-    riskLevel: '中风险',
-    manager: '刘强',
-  },
-  {
-    code: '000478',
-    name: '建信中证500指数增强A',
-    type: '指数型',
-    yearReturn: 10.45,
-    threeYearReturn: 38.67,
-    riskLevel: '中风险',
-    manager: '陈静',
-  },
-  {
-    code: '110027',
-    name: '易方达安心回报债券A',
-    type: '债券型',
-    yearReturn: 5.23,
-    threeYearReturn: 18.45,
-    riskLevel: '低风险',
-    manager: '张明',
-  },
-  {
-    code: '161716',
-    name: '招商双债增强债券(LOF)C',
-    type: '债券型',
-    yearReturn: 4.87,
-    threeYearReturn: 16.92,
-    riskLevel: '低风险',
-    manager: '李强',
-  },
-  {
-    code: '000286',
-    name: '银华信用季季红债券A',
-    type: '债券型',
-    yearReturn: 4.32,
-    threeYearReturn: 15.78,
-    riskLevel: '低风险',
-    manager: '王芳',
-  },
-];
+// 基金经理信息将从API中获取，如无则为空
 
 exports.handler = async (event, context) => {
   // 设置 CORS 头
@@ -125,100 +33,155 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    // 股票代码列表
+    // 股票代码列表 - 扩展更多股票以获得更多数据
     const stockSymbols = [
+      // 美股大盘
       'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX',
+      // 中概股
       'BABA', 'JD', 'PDD', 'BIDU', 'NIO', 'XPEV', 'LI',
-      'SPY', 'QQQ', 'IWM', 'VTI', 'VEA', 'VWO'
+      // ETF基金
+      'SPY', 'QQQ', 'IWM', 'VTI', 'VEA', 'VWO', 'BND', 'TLT',
+      // 行业ETF
+      'GDX', 'XLF', 'XLK', 'XLE', 'XLV', 'XLI', 'XLP', 'XLY', 'XLU', 'XLRE', 'XLB', 'XLC'
     ];
     
-    let useRealData = false;
     let allStockData = [];
     
-    try {
-      console.log('📊 开始获取Yahoo Finance数据...');
-      
-      // 批量获取股票数据（限制数量以避免超时）
-      const limitedSymbols = stockSymbols.slice(0, 10);
-      console.log('🎯 获取股票代码:', limitedSymbols.join(', '));
-      
-      const stockDataPromises = limitedSymbols.map(async (symbol) => {
-        try {
-          const quote = await yahooFinance.quote(symbol);
+    console.log('📊 开始获取Yahoo Finance数据...');
+    
+    // 批量获取股票数据（增加数量以获得更多真实数据）
+    const limitedSymbols = stockSymbols.slice(0, 15); // 增加到15个
+    console.log('🎯 获取股票代码:', limitedSymbols.join(', '));
+    
+    // 设置超时控制
+    const timeout = (ms) => new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('请求超时')), ms)
+    );
+    
+    const stockDataPromises = limitedSymbols.map(async (symbol) => {
+      try {
+        // 为每个请求设置5秒超时
+        const quote = await Promise.race([
+          yahooFinance.quote(symbol),
+          timeout(5000)
+        ]);
+        
+        if (quote && quote.regularMarketPrice) {
           console.log(`✅ 成功获取 ${symbol} 数据:`, quote.shortName, quote.regularMarketPrice);
           return {
             symbol: symbol,
             quote: quote
           };
-        } catch (error) {
-          console.warn(`❌ 获取${symbol}数据失败:`, error.message);
+        } else {
+          console.warn(`❌ ${symbol} 数据无效`);
           return null;
         }
-      });
-      
-      const stockResponses = await Promise.all(stockDataPromises);
+      } catch (error) {
+        console.warn(`❌ 获取${symbol}数据失败:`, error.message);
+        return null;
+      }
+    });
+    
+    // 设置总体超时为12秒
+    try {
+      const stockResponses = await Promise.race([
+        Promise.all(stockDataPromises),
+        timeout(12000)
+      ]);
       
       for (const stockData of stockResponses) {
         if (stockData && stockData.quote) {
           allStockData.push(stockData);
-          useRealData = true;
         }
       }
       
       console.log(`✅ 成功获取 ${allStockData.length} 条Yahoo Finance数据`);
       
-    } catch (apiError) {
-      console.warn('⚠️ Yahoo Finance API不可用:', apiError.message);
+    } catch (timeoutError) {
+      console.warn('⚠️ 批量请求超时，尝试获取部分数据');
+      
+      // 如果批量请求超时，尝试逐个获取前5个
+      for (let i = 0; i < Math.min(5, limitedSymbols.length); i++) {
+        try {
+          const symbol = limitedSymbols[i];
+          const quote = await Promise.race([
+            yahooFinance.quote(symbol),
+            timeout(3000)
+          ]);
+          
+          if (quote && quote.regularMarketPrice) {
+            console.log(`✅ 单独获取 ${symbol} 成功`);
+            allStockData.push({
+              symbol: symbol,
+              quote: quote
+            });
+          }
+        } catch (error) {
+          console.warn(`❌ 单独获取失败:`, error.message);
+        }
+      }
     }
     
-    let fundsData;
+    // 检查是否获取到足够的数据
+    if (allStockData.length === 0) {
+      console.error('❌ 无法获取任何Yahoo Finance数据');
+      return {
+        statusCode: 503,
+        headers,
+        body: JSON.stringify({ 
+          error: '数据服务暂时不可用',
+          message: '无法从Yahoo Finance获取数据，请稍后重试',
+          code: 'DATA_UNAVAILABLE'
+        })
+      };
+    }
     
-    if (useRealData && allStockData.length > 0) {
-      console.log('📈 使用Yahoo Finance实时数据');
-      // 转换股票数据为基金数据格式
-      fundsData = allStockData.map(stockData => {
-        const quote = stockData.quote;
-        const regularMarketChangePercent = quote.regularMarketChangePercent || 0;
-        const yearReturn = regularMarketChangePercent * 50;
-        const threeYearReturn = yearReturn * 2.5;
-        
-        let riskLevel = '中风险';
-        const absChange = Math.abs(regularMarketChangePercent);
-        if (absChange > 5) {
-          riskLevel = '高风险';
-        } else if (absChange > 3) {
-          riskLevel = '中高风险';
-        } else if (absChange < 1) {
-          riskLevel = '低风险';
-        }
-        
-        const managerNames = ['张伟', '李娜', '王强', '刘敏', '陈杰'];
-        const randomManager = managerNames[Math.floor(Math.random() * managerNames.length)];
-        const fundCode = stockData.symbol.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 6).padEnd(6, '0');
-        
-        return {
+    console.log('📈 使用Yahoo Finance实时数据');
+    
+    // 转换股票数据为基金数据格式
+    const fundsData = allStockData.map(stockData => {
+      const quote = stockData.quote;
+      const regularMarketChangePercent = quote.regularMarketChangePercent || 0;
+      const yearReturn = regularMarketChangePercent * 50;
+      const threeYearReturn = yearReturn * 2.5;
+      
+      let riskLevel = '中风险';
+      const absChange = Math.abs(regularMarketChangePercent);
+      if (absChange > 5) {
+        riskLevel = '高风险';
+      } else if (absChange > 3) {
+        riskLevel = '中高风险';
+      } else if (absChange < 1) {
+        riskLevel = '低风险';
+      }
+      
+      const fundCode = stockData.symbol.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 6).padEnd(6, '0');
+      
+      // 确定基金类型
+      let fundType = '股票型';
+      if (stockData.symbol.includes('BND') || stockData.symbol.includes('TLT')) {
+        fundType = '债券型';
+      } else if (stockData.symbol.includes('SPY') || stockData.symbol.includes('QQQ') || 
+                 stockData.symbol.includes('VTI') || stockData.symbol.includes('XL')) {
+        fundType = '指数型';
+      } else if (Math.random() > 0.7) {
+        fundType = '混合型';
+      }
+      
+      return {
           code: fundCode,
           name: `${quote.shortName || stockData.symbol}基金`,
-          type: '股票型',
+          type: fundType,
           yearReturn: parseFloat(yearReturn.toFixed(2)),
           threeYearReturn: parseFloat(threeYearReturn.toFixed(2)),
           riskLevel: riskLevel,
-          manager: randomManager,
           netWorth: (quote.regularMarketPrice || 1).toFixed(4),
           dayGrowth: regularMarketChangePercent.toFixed(2),
-          updateTime: new Date().toISOString()
+          updateTime: new Date().toISOString(),
+          source: 'Yahoo Finance',
+          originalSymbol: stockData.symbol
         };
-      });
-    } else {
-      console.log('📋 使用模拟数据');
-      // 使用模拟数据
-      fundsData = mockFunds.map(fund => ({
-        ...fund,
-        netWorth: (Math.random() * 2 + 1).toFixed(4),
-        dayGrowth: (Math.random() * 6 - 3).toFixed(2),
-        updateTime: new Date().toISOString()
-      }));
-    }
+    });
     
     console.log(`✅ 返回基金数据，共 ${fundsData.length} 只基金`);
     console.log('📊 基金列表:', fundsData.map(f => `${f.name}(${f.code})`).join(', '));
@@ -233,19 +196,16 @@ exports.handler = async (event, context) => {
     console.error('❌ 获取基金数据失败:', error);
     console.error('❌ 错误堆栈:', error.stack);
     
-    // 返回模拟数据作为备用
-    console.log('🔄 使用备用模拟数据');
-    const fallbackData = mockFunds.map(fund => ({
-      ...fund,
-      netWorth: (Math.random() * 2 + 1).toFixed(4),
-      dayGrowth: (Math.random() * 6 - 3).toFixed(2),
-      updateTime: new Date().toISOString()
-    }));
-    
+    // 不再返回模拟数据，直接返回错误
     return {
-      statusCode: 200,
+      statusCode: 500,
       headers,
-      body: JSON.stringify(fallbackData)
+      body: JSON.stringify({ 
+        error: '获取基金数据失败',
+        message: '无法从数据源获取实时数据，请检查网络连接或稍后重试',
+        details: error.message,
+        code: 'API_ERROR'
+      })
     };
   }
 };

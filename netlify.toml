@@ -1,11 +1,19 @@
 [build]
   publish = "dist"
   command = "npm run build"
+  functions = "netlify/functions"
 
 [functions]
-  directory = "netlify/functions"
+  # 设置函数超时时间为60秒
+  timeout = 60
+  # 设置函数内存限制
+  memory = 1024
 
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+# 环境变量配置
+[build.environment]
+  NODE_VERSION = "18"
