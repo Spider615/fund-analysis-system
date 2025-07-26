@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "serve": "node server/index.js",
     "start": "concurrently \"npm run dev\" \"npm run serve\"",
-    "verify-deployment": "node verify-deployment.js"
+    "verify-deployment": "node verify-deployment.js",
+    "clean": "rm -rf node_modules package-lock.json && npm install",
+    "clean-deploy": "node clean-deploy.js",
+    "deploy-prep": "npm run clean-deploy && npm install"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
@@ -28,6 +31,18 @@
     "vite": "^5.0.8"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "18.x"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }

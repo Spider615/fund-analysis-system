@@ -1,0 +1,8 @@
+{
+  "name": "netlify-functions",
+  "version": "1.0.0",
+  "dependencies": {
+    "openai": "^5.10.2",
+    "yahoo-finance2": "^2.13.3"
+  }
+}

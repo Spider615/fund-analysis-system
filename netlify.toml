@@ -1,20 +1,33 @@
 [build]
   publish = "dist"
-  command = "npm run build"
+  command = "npm ci && npm run build"
   functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_FLAGS = "--production=false"
+  DEEPSEEK_API_KEY = "sk-0e7376d4dbc84cc0b97a47d658297635"
 
 [functions]
   # 设置函数超时时间为60秒
   timeout = 60
   # 设置函数内存限制
   memory = 1024
+  # 设置 Node.js 版本
+  node_bundler = "esbuild"
 
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
-# 环境变量配置
-[build.environment]
-  NODE_VERSION = "18"
-  DEEPSEEK_API_KEY = "sk-0e7376d4dbc84cc0b97a47d658297635"
+# 强制清理缓存
+[build.processing]
+  skip_processing = false
+
+# 头部设置
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
